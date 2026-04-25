@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prompt-genome"
+version = "0.1.0"
+description = "A tiny evolutionary optimizer for LLM prompts."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "Mukunda Katta", email = "mukunda.vjcs6@gmail.com"}]
+keywords = ["llm", "prompt-engineering", "evolutionary", "optimizer", "ai-agents", "self-evolving"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/MukundaKatta/prompt-genome"
+Source = "https://github.com/MukundaKatta/prompt-genome"
+Issues = "https://github.com/MukundaKatta/prompt-genome/issues"
+
+[project.scripts]
+prompt-genome = "prompt_genome.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["prompt_genome*"]

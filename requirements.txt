@@ -1,0 +1,3 @@
+# Core has no required runtime dependencies.
+# Dev / testing only:
+# (use the standard library unittest module; nothing to install)
