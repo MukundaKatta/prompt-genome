@@ -1,126 +1,79 @@
 # prompt-genome
 
-A tiny, dependency-light evolutionary optimizer for LLM prompts. Treat your prompts as a population of "genomes" that mutate, recombine, and survive based on eval scores. Inspired by the 2026 wave of self-evolving agent frameworks, but stripped down to the essentials so you can drop it into any pipeline in an afternoon.
+A tiny, dependency-free evolutionary optimizer for LLM prompts. Mutate, crossover, and select prompts based on your eval scores.
 
-## Why
-
-Prompt engineering is mostly trial and error. `prompt-genome` automates the trial-and-error loop:
-
-1. Start with a small pool of seed prompts.
-2. Score each prompt against your eval cases using a function you supply.
-3. Mutate, crossover, and keep the survivors.
-4. Repeat until the score plateaus or you hit your generation cap.
-
-You bring the eval function and the seeds. The library handles the search.
-
-## Features
-
-- Pure Python, zero required runtime dependencies.
-- Pluggable mutation operators: word swap, instruction injection, fragment splice, persona shuffle.
-- Crossover that respects sentence and section boundaries so children stay readable.
-- Tournament, elitist, and rank selection strategies.
-- Deterministic mode with seeded RNG for reproducible runs.
-- JSONL run log so you can inspect every generation later.
-
-## Installation
+## Install
 
 ```bash
-pip install prompt-genome
-```
-
-Or from source:
-
-```bash
-git clone https://github.com/MukundaKatta/prompt-genome.git
-cd prompt-genome
 pip install -e .
 ```
 
-## Quick Start
+Pure-stdlib at runtime. Python 3.10+. `pytest` is the only dev dependency.
+
+## Concept
+
+A prompt is modeled as a **Genome** of typed **Segments** (`system`, `instruction`, `examples`, `constraints`, `format`, `freeform`). Mutation rewrites, swaps, deletes, inserts, or reorders segments; crossover recombines two parent genomes. A user-supplied `evaluate(prompt) -> float` drives selection. Tournament selection plus elitism guarantee the best-so-far score is non-decreasing across generations.
+
+## Quick start
 
 ```python
-from prompt_genome import Evolver, Genome
+from prompt_genome import Genome, Segment, Optimizer
 
-seeds = [
-    "Summarize the article in 3 bullet points.",
-    "Read the article and produce a concise 3-point summary.",
-    "Give me a tight 3-bullet summary of the following article.",
+pool = [
+    Segment("system", "you are concise"),
+    Segment("instruction", "answer in one sentence"),
+    Segment("constraints", "no filler words"),
 ]
+seed = [Genome(segments=[Segment("system", "be helpful")])]
 
-def fitness(prompt: str) -> float:
-    # Plug in your eval here. Higher is better.
-    # Could be: rouge score, judge LLM rating, citation coverage, etc.
-    return run_my_eval(prompt)
+# Trivially: favor short rendered prompts.
+def evaluate(prompt: str) -> float:
+    return -float(len(prompt))
 
-evolver = Evolver(
-    seeds=seeds,
-    fitness_fn=fitness,
-    population_size=12,
-    generations=8,
-    mutation_rate=0.35,
-    seed=42,
-)
-
-best = evolver.run()
-print(f"Best score: {best.score:.3f}")
-print(f"Best prompt:\n{best.text}")
+opt = Optimizer(evaluate, pool, population_size=10, seed=0)
+result = opt.evolve(seed, generations=10)
+print(result.best_score, result.best.render())
 ```
 
-## How the Loop Works
-
-```
-seeds -> initial population
-   |
-   v
-score every genome (fitness_fn)
-   |
-   v
-select parents (tournament / elitist / rank)
-   |
-   v
-crossover + mutate -> children
-   |
-   v
-form next generation -> repeat until stop
-```
-
-Stop conditions: max generations, score plateau (configurable patience), or a wall-clock budget.
-
-## Run Logs
-
-Every generation is appended to `runs/<timestamp>.jsonl` so you can audit the search:
-
-```json
-{"gen": 0, "id": "g0-3", "score": 0.71, "text": "Summarize ..."}
-{"gen": 1, "id": "g1-7", "score": 0.78, "parents": ["g0-3", "g0-1"], ...}
-```
-
-Use the bundled `prompt-genome inspect runs/<file>.jsonl` CLI to print a leaderboard.
-
-## Examples
-
-See the `examples/` directory:
-
-- `examples/summarization.py` - evolve a summarization prompt against a small dev set.
-- `examples/classifier.py` - evolve a classification prompt with a label-match fitness.
-- `examples/cli_demo.py` - end-to-end CLI run with a mock fitness function.
-
-## Contributing
-
-Issues and PRs are welcome. Good first contributions:
-
-- New mutation operators (e.g. instruction reordering, few-shot example injection).
-- Adapters for common eval frameworks (lm-eval-harness, promptfoo, deepeval).
-- Smarter stop conditions (e.g. confidence intervals on score deltas).
-
-Run the tests with:
+## CLI
 
 ```bash
-python -m unittest discover -s tests
+pgen evolve \
+  --population pop.jsonl \
+  --eval my_eval.py \
+  --pool pool.jsonl \
+  --generations 10 \
+  --seed 0 \
+  --out best.json
 ```
 
-Please keep new code dependency-free in the core, and put any heavy adapters under `prompt_genome/adapters/`.
+`pop.jsonl` is one Genome per line (`{"segments":[{"kind":"system","text":"..."}],"meta":{}}`). `pool.jsonl` is one Segment per line (`{"kind":"instruction","text":"..."}`). The output file is JSON with `score`, `history`, `genome`, and `rendered`.
+
+`pgen --help` and `pgen --version` are also available.
+
+## Eval file contract
+
+`--eval` points at a Python file that defines a top-level callable:
+
+```python
+def evaluate(prompt: str) -> float:
+    # higher is better
+    return your_score
+```
+
+The file is loaded via `importlib.util.spec_from_file_location`, so any pure-Python implementation works. `prompt` is the rendered Genome (`Genome.render()`).
+
+## Determinism
+
+Every operator and the optimizer take a `random.Random` (or a `seed`). Same seed plus same `evaluate` plus same inputs produce the same result.
+
+## Tests
+
+```bash
+pip install -e ".[dev]"
+python -m pytest -q
+```
 
 ## License
 
-MIT. See LICENSE.
+MIT. See `LICENSE`.

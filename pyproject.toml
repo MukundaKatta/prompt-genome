@@ -5,14 +5,17 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "prompt-genome"
 version = "0.1.0"
-description = "A tiny evolutionary optimizer for LLM prompts."
+description = "A tiny, dependency-free evolutionary optimizer for LLM prompts. Mutate, crossover, and select prompts based on your eval scores."
 readme = "README.md"
-requires-python = ">=3.9"
-license = {text = "MIT"}
-authors = [{name = "Mukunda Katta", email = "mukunda.vjcs6@gmail.com"}]
-keywords = ["llm", "prompt-engineering", "evolutionary", "optimizer", "ai-agents", "self-evolving"]
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mukunda Katta" }]
+keywords = ["llm", "prompt-engineering", "evolutionary", "optimizer", "genetic-algorithm"]
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Intended Audience :: Developers",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -25,7 +28,13 @@ Source = "https://github.com/MukundaKatta/prompt-genome"
 Issues = "https://github.com/MukundaKatta/prompt-genome/issues"
 
 [project.scripts]
-prompt-genome = "prompt_genome.cli:main"
+pgen = "prompt_genome.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
 
 [tool.setuptools.packages.find]
-include = ["prompt_genome*"]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
